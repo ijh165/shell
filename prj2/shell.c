@@ -8,6 +8,17 @@
 #define COMMAND_LENGTH 1024
 #define NUM_TOKENS (COMMAND_LENGTH / 2 + 1)
 
+int tokenize_command(char* buff, char* tokens[])
+{
+	int i = 0;
+	tokens[i++] = &buff[0];
+	for(int buff_ind=0; buff_ind<COMMAND_LENGTH; buff_ind++)
+	{
+		if(buff[buff_ind-1]==' ')
+			tokens[i++] = &buff[buff_ind];
+	}
+}
+
 /**
 * Read a command from the keyboard into the buffer 'buff' and tokenize it
 * such that 'tokens[i]' points into 'buff' to the i'th token in the command.
@@ -19,7 +30,7 @@
 * in_background: pointer to a boolean variable. Set to true if user entered
 * an & as their last token; otherwise set to false.
 */
-void read_command(char *buff, char *tokens[], _Bool *in_background)
+void read_command(char* buff, char* tokens[], _Bool* in_background)
 {
 	*in_background = false;
 
@@ -57,7 +68,7 @@ void read_command(char *buff, char *tokens[], _Bool *in_background)
 int main(int argc, char* argv[])
 {
 	char input_buffer[COMMAND_LENGTH];
-	char *tokens[NUM_TOKENS];
+	char* tokens[NUM_TOKENS];
 	while (true) {
 		// Get command
 		// Use write because we need to use read()/write() to work with

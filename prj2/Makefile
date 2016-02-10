@@ -1,27 +1,17 @@
-## This is a simple Makefile with lost of comments 
-## Check Unix Programming Tools handout for more info.
+#  Filename: Makefile
+#  Created by Ivan Jonathan Hoo
+#  Copyright (c) 2016 Ivan Jonathan Hoo. All rights reserved.
 
-# Define what compiler to use and the flags.
-CC=gcc
-CXX=g++
-CCFLAGS= -g -Wall -Werror
+CC = gcc
+CFLAGS = -std=c99 -g 
+LDFLAGS += -lm -lglut -lGL
 
-all: shell_sol
+SRC = shell.c
 
-# Compile all .c files into .o files
-# % matches all (like * in a command)
-# $< is the source file (.c file)
-%.o : %.c
-	$(CC) -c $(CCFLAGS) $<
+all: shell
 
-
-
-shell: shell.o 
-	$(CC) -o shell shell.o $(CCFLAGS)
-
-shell_sol: shell_sol.o 
-	$(CC) -o shell_sol shell_sol.o $(CCFLAGS)
+shell: $(SRC)
+	$(CC) $(CFLAGS) $(SRC) -o shell $(LDFLAGS)
 
 clean:
-	rm -f core *.o shell shell_sol
-
+	rm -f shell *.o
