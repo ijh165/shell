@@ -12,7 +12,7 @@ int tokenize_command(char* buff, char* tokens[])
 {
 	int i = 0;
 	tokens[i++] = &buff[0];
-	for(int buff_ind=0; buff_ind<COMMAND_LENGTH; buff_ind++)
+	for(int buff_ind=1; buff_ind<COMMAND_LENGTH; buff_ind++)
 	{
 		if(buff[buff_ind-1]==' ')
 			tokens[i++] = &buff[buff_ind];
