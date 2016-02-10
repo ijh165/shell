@@ -1,2 +1,2 @@
-# shell
-cmpt 300 ass2
+# UNIX shell
+cmpt 300 project 2
