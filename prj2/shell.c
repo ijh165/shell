@@ -8,15 +8,31 @@
 #define COMMAND_LENGTH 1024
 #define NUM_TOKENS (COMMAND_LENGTH / 2 + 1)
 
+//for debug
+void print_tokens(char* tokens[], int numOfTokens)
+{
+	for(int i=0; i<numOfTokens; i++)
+		write(STDOUT_FILENO, tokens[i], strlen(tokens[i]));
+	write(STDOUT_FILENO, "\n", strlen("\n"));
+}
+
 int tokenize_command(char* buff, char* tokens[])
 {
-	int i = 0;
-	tokens[i++] = &buff[0];
-	for(int buff_ind=1; buff_ind<COMMAND_LENGTH; buff_ind++)
+	int i=0, last=0;
+	for(int buff_ind=0; buff_ind<strlen(buff); buff_ind++)
 	{
-		if(buff[buff_ind-1]==' ')
-			tokens[i++] = &buff[buff_ind];
+		if(buff[buff_ind]==' ')
+		{
+			tokens[i] = malloc(sizeof(char)*(buff_ind-last+1));
+			int j=0;
+			for(int b=last; b<buff_ind; b++)
+				tokens[i][j++] = buff[b];
+			tokens[j] = '\0';
+			last = buff_ind+1;
+			i++;
+		}
 	}
+	return i+1;
 }
 
 /**
@@ -48,7 +64,6 @@ void read_command(char* buff, char* tokens[], _Bool* in_background)
 		buff[strlen(buff) - 1] = '\0';
 	}
 
-
 	// Tokenize (saving original command string)
 	int token_count = tokenize_command(buff, tokens);
 	if (token_count == 0) {
@@ -69,7 +84,8 @@ int main(int argc, char* argv[])
 {
 	char input_buffer[COMMAND_LENGTH];
 	char* tokens[NUM_TOKENS];
-	while (true) {
+	while(true)
+	{
 		// Get command
 		// Use write because we need to use read()/write() to work with
 		// signals, and they are incompatible with printf().
@@ -86,5 +102,6 @@ int main(int argc, char* argv[])
 		* read_command() again immediately.
 		*/
 	}
+	
 	return 0;
 }
