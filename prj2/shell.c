@@ -44,8 +44,8 @@ void read_command(char *buff, char *tokens[], _Bool *in_background)
 	int length = read(STDIN_FILENO, buff, COMMAND_LENGTH-1);
 	if ( (length < 0) && (errno !=EINTR) )
 	{
-	perror("Unable to read command. Terminating.\n");
-	exit(-1); /* terminate with error */
+		perror("Unable to read command. Terminating.\n");
+		exit(-1); /* terminate with error */
 	}
 	
 	// Null terminate and strip \n.
@@ -69,10 +69,10 @@ void read_command(char *buff, char *tokens[], _Bool *in_background)
 	//printf("here\n");
 	if (token_count > 0 && strcmp(tokens[token_count - 1], "&") == 0) {
 		//printf("there\n");
-	*in_background = true;
+		*in_background = true;
 
-	//printf("%d\n", token_count);
-	tokens[token_count - 1] = 0;
+		//printf("%d\n", token_count);
+		tokens[token_count - 1] = 0;
 	}	
 	//return;
 }
@@ -110,12 +110,11 @@ int main(int argc, char* argv[])
 			if (execvp(tokens[0], tokens) == -1) {
 				perror("SHELL ERROR");
 			}
-			return;
 		}
-		else {
+		else if(!in_background) {
 			do {
 				pid_t wait_pid = waitpid(pid, &stat_val, WUNTRACED);
-			} while (!WIFEXITED(stat_val) && !WIFSIGNALED(stat_val));
+			} while (!WIFEXITED(stat_val) && !WIFSIGNALED(stat_val) && !in_background);
 		}
 	}
 
