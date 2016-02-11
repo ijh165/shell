@@ -1,3 +1,6 @@
+// Team Lolicon 2.0
+// Filename
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -34,10 +37,12 @@ int tokenize_command(char* buff, char* tokens[])
  * 'tokens' will be NULL terminated.
  * in_background: pointer to a boolean variable. Set to true if user entered
  * an & as their last token; otherwise set to false.
+ * internal_
  */
-void read_command(char *buff, char *tokens[], _Bool *in_background)
+void read_command(char* buff, char* tokens[], _Bool* in_background, _Bool* internal_cmd)
 {
 	*in_background = false;
+	*internal_cmd = false;
 	
 	// Read input
 	
@@ -56,25 +61,41 @@ void read_command(char *buff, char *tokens[], _Bool *in_background)
 	
 	
 	// Tokenize (saving original command string)
-	//printf("String: %s\n", buff);
 	int token_count = tokenize_command(buff, tokens);
-	//printf("%d\n", token_count);
 	if (token_count == 0) {
 		return;
 	}
-	
-	// Extract if running in background:
-	//int ret = 0;
-	//ret = strcmp(tokens[token_count - 1], "&");
-	//printf("here\n");
-	if (token_count > 0 && strcmp(tokens[token_count - 1], "&") == 0) {
-		//printf("there\n");
-		*in_background = true;
 
-		//printf("%d\n", token_count);
+	// internal commands
+	if (strcmp(tokens[0], "exit") == 0) {
+		*internal_cmd = true;
+		write(STDOUT_FILENO, "exiting shell\n", strlen("exiting shell\n"));
+		exit(0);
+	}
+	else if (strcmp(tokens[0], "cwd") == 0) {
+		*internal_cmd =  true;
+		char cwd[COMMAND_LENGTH];
+		if (getcwd(cwd, sizeof(cwd)) != NULL) {
+			write(STDOUT_FILENO, cwd, strlen(cwd));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+		}
+		else {
+			perror("getcwd() error\n");
+		}
+		return;
+	}
+	else if (strcmp(tokens[0], "cd") == 0) {
+		*internal_cmd = true;
+		if (chdir(tokens[1]) != 0) {
+			perror("SHELL ERROR");
+		}
+	}
+
+	// Extract if running in background:
+	if (token_count > 0 && strcmp(tokens[token_count - 1], "&") == 0) {
+		*in_background = true;
 		tokens[token_count - 1] = 0;
-	}	
-	//return;
+	}
 }
 
 /**
@@ -89,9 +110,16 @@ int main(int argc, char* argv[])
 		// Get command
 		// Use write because we need to use read()/write() to work with
 		// signals, and they are incompatible with printf().
+		char cwd[COMMAND_LENGTH];
+		if (getcwd(cwd, sizeof(cwd)) != NULL) {
+			write(STDOUT_FILENO, cwd, strlen(cwd));
+		}
+		else {
+			perror("getcwd() error");
+		}
 		write(STDOUT_FILENO, "> ", strlen( "> "));
-		_Bool in_background = false;
-		read_command(input_buffer, tokens, &in_background);
+		_Bool in_background = false, internal_cmd = false;
+		read_command(input_buffer, tokens, &in_background, &internal_cmd);
 
 		/**
 		 * Steps For Basic Shell:
@@ -101,23 +129,28 @@ int main(int argc, char* argv[])
 		 * child to finish. Otherwise, parent loops back to
 		 * read_command() again immediately.
 		 */
-		int stat_val;
-		pid_t pid = fork();
-		if (pid < 0) {
-			perror("SHELL ERROR (FORKING FAIL)");
-		}
-		else if (pid == 0) {
-			if (execvp(tokens[0], tokens) == -1) {
-				perror("SHELL ERROR");
+		if(!internal_cmd) {
+			int stat_val;
+			pid_t pid = fork();
+			if (pid < 0) {
+				perror("SHELL ERROR (FORKING FAIL)");
 			}
-		}
-		else if(!in_background) {
-			do {
-				pid_t wait_pid = waitpid(pid, &stat_val, WUNTRACED);
-			} while (!WIFEXITED(stat_val) && !WIFSIGNALED(stat_val) && !in_background);
+			else if (pid == 0) {
+				if (execvp(tokens[0], tokens) == -1) {
+					perror("SHELL ERROR");
+				}
+				return 0;
+			}
+			else if(!in_background) {
+				do {
+					pid_t wait_pid = waitpid(pid, &stat_val, WUNTRACED);
+				} while (!WIFEXITED(stat_val) && !WIFSIGNALED(stat_val) && !in_background);
+
+				// Cleanup zombies processes
+				while (waitpid(-1, NULL, WNOHANG) > 0);
+			}
 		}
 	}
 
 	return 0;
 }
-	
