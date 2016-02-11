@@ -1,5 +1,6 @@
-// Team Lolicon 2.0
-// Filename
+// Filename: shell.c
+// Created by Ivan Jonathan Hoo and Raymond Chan
+// Copyright (c) 2016 Team Lolicon 2.0. All rights reserved.
 
 #include <stdio.h>
 #include <stdbool.h>
