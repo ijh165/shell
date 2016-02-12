@@ -11,9 +11,16 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 
+//definitions
 #define COMMAND_LENGTH 1024
 #define NUM_TOKENS (COMMAND_LENGTH / 2+1)
+#define HISTORY_DEPTH 10
 
+//global history str arr
+int cmd_count;
+char* history[HISTORY_DEPTH];
+
+//split the buff into tokens
 int tokenize_command(char* buff, char* tokens[])
 {
 	int i = 0;
@@ -28,6 +35,46 @@ int tokenize_command(char* buff, char* tokens[])
 	return i;
 }
 
+//update the history str arr
+void update_history(char** history, char* buff)
+{
+	int index = cmd_count % HISTORY_DEPTH;
+	printf("%d\n", index);
+	if(cmd_count >= 10) {
+		printf("free time!\n");
+		free(history[index]);
+		//history[index] = malloc(sizeof(char)*COMMAND_LENGTH);
+	}
+	history[index] = strdup(buff);
+	cmd_count++;
+}
+
+//prints the history
+void print_history()
+{
+	if(cmd_count<=10)
+		for(int i = 0; i<cmd_count; i++)
+		{
+			char* num_str = malloc(16);
+			snprintf(num_str, 16, "%d", i+1);
+			write(STDOUT_FILENO, num_str, strlen(num_str));
+			write(STDOUT_FILENO, ". ", strlen(". "));
+			write(STDOUT_FILENO, history[i], strlen(history[i]));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+		}
+	else
+		for(int i = cmd_count-10; i<cmd_count; i++)
+		{
+			char* num_str = malloc(16);
+			snprintf(num_str, 16, "%d", i+1);
+			write(STDOUT_FILENO, num_str, strlen(num_str));
+			write(STDOUT_FILENO, ". ", strlen(". "));
+			write(STDOUT_FILENO, history[i], strlen(history[i % HISTORY_DEPTH]));
+			write(STDOUT_FILENO, "\n", strlen("\n"));
+		}
+
+}
+
 /**
  * Read a command from the keyboard into the buffer 'buff' and tokenize it
  * such that 'tokens[i]' points into 'buff' to the i'th token in the command.
@@ -38,7 +85,8 @@ int tokenize_command(char* buff, char* tokens[])
  * 'tokens' will be NULL terminated.
  * in_background: pointer to a boolean variable. Set to true if user entered
  * an & as their last token; otherwise set to false.
- * internal_
+ * internal_cmd: pointer to a boolean variable. Set to true if user entered
+ * internal commands.
  */
 void read_command(char* buff, char* tokens[], _Bool* in_background, _Bool* internal_cmd)
 {
@@ -46,7 +94,6 @@ void read_command(char* buff, char* tokens[], _Bool* in_background, _Bool* inter
 	*internal_cmd = false;
 	
 	// Read input
-	
 	int length = read(STDIN_FILENO, buff, COMMAND_LENGTH-1);
 	if ( (length < 0) && (errno !=EINTR) )
 	{
@@ -59,7 +106,9 @@ void read_command(char* buff, char* tokens[], _Bool* in_background, _Bool* inter
 	if (buff[strlen(buff) - 1] == '\n') {
 		buff[strlen(buff) - 1] = '\0';
 	}
-	
+
+	if(strlen(buff) != '\0')
+		update_history(history, buff);
 	
 	// Tokenize (saving original command string)
 	int token_count = tokenize_command(buff, tokens);
@@ -91,6 +140,10 @@ void read_command(char* buff, char* tokens[], _Bool* in_background, _Bool* inter
 			perror("SHELL ERROR");
 		}
 	}
+	else if (strcmp(tokens[0], "history") == 0) {
+		*internal_cmd = true;
+		print_history();
+	}
 
 	// Extract if running in background:
 	if (token_count > 0 && strcmp(tokens[token_count - 1], "&") == 0) {
@@ -105,7 +158,9 @@ void read_command(char* buff, char* tokens[], _Bool* in_background, _Bool* inter
 int main(int argc, char* argv[])
 {
 	char input_buffer[COMMAND_LENGTH];
-	char *tokens[NUM_TOKENS];
+	char* tokens[NUM_TOKENS];
+	cmd_count = 0;
+
 	while (true)
 	{
 		// Get command
@@ -145,7 +200,7 @@ int main(int argc, char* argv[])
 			else if(!in_background) {
 				do {
 					pid_t wait_pid = waitpid(pid, &stat_val, WUNTRACED);
-				} while (!WIFEXITED(stat_val) && !WIFSIGNALED(stat_val) && !in_background);
+				} while (!WIFEXITED(stat_val) && !WIFSIGNALED(stat_val));
 
 				// Cleanup zombies processes
 				while (waitpid(-1, NULL, WNOHANG) > 0);
