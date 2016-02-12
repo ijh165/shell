@@ -155,7 +155,7 @@ void exec_cmd(char* tokens[], _Bool in_background)
 		}
 	}
 	else if (tokens[0][0]== '!') {
-		//TODO: HAVE TO IMPLEMENT THIS!!!
+		//TODO: HAVE TO IMPLEMENT THIS!!! (!n func)
 	}
 	//non internal commands
 	else {
