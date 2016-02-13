@@ -2,20 +2,20 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <assert.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/wait.h>
 #include <sys/types.h>
 
-//definitions
+//int defns
 #define COMMAND_LENGTH 1024
 #define NUM_TOKENS (COMMAND_LENGTH / 2+1)
 #define HISTORY_DEPTH 10
 
 //string defns
 #define SHELL_EXIT "Exiting shell\n"
-
-//error msg
 #define SHELL_ERR "SHELL ERROR"
 #define FORK_FAIL_ERR "SHELL ERROR (FORKING FAIL)"
 #define CANNOT_READ_CMD_ERR "Unable to read command. Terminating.\n"
@@ -89,14 +89,16 @@ void parse_input(char* buff, int length, char* tokens[], _Bool* in_background)
 		buff[strlen(buff) - 1] = '\0';
 	}
 
+	// Update history only if user enters something
+	if (strlen(buff) != 0) {
+		update_history(history, buff);
+	}
+
 	// Tokenize (saving original command string)
 	int token_count = tokenize_command(buff, tokens);
 	if (token_count == 0) {
 		return;
 	}
-
-	// Update history
-	update_history(history, buff);
 
 	// Extract if running in background:
 	if (token_count > 0 && strcmp(tokens[token_count - 1], "&") == 0) {
@@ -185,16 +187,19 @@ void exec_cmd(char* tokens[], _Bool in_background)
 				num_str[j] = tokens[0][i];
 			num_str[strlen(tokens[0])] = "\0";
 			int num = atoi(num_str);
+			/*printf("%d\n", num);
+			printf("%d\n", cmd_count);
+			printf("%d\n", (num >= cmd_count+1));*/
 			if (num == 0) {
 				cmd_count--;
 				write(STDOUT_FILENO, NOT_INTEGER_ERR, strlen(NOT_INTEGER_ERR));
 			}
-			else if (num >= cmd_count+1) {
+			else if (num >= cmd_count) {
 				cmd_count--;
 				write(STDOUT_FILENO, SHELL_ERR, strlen(SHELL_ERR));
 				write(STDOUT_FILENO, ": ", strlen(": "));
 				write(STDOUT_FILENO, num_str, strlen(num_str));
-				switch(num==1) {
+				switch (num) {
 					case 1:
 						write(STDOUT_FILENO, "st ", strlen("st "));
 						break;
@@ -251,16 +256,36 @@ void exec_cmd(char* tokens[], _Bool in_background)
 	}
 }
 
+void handle_SIGINT()
+{
+	write(STDOUT_FILENO, "\n", strlen("\n"));
+	print_history();
+}
+
 /**
 * Main and Execute Commands
 */
 int main(int argc, char* argv[])
 {
+	/* set up the signal handler */
+	struct sigaction handler;
+	handler.sa_handler = handle_SIGINT;
+	handler.sa_flags = 0;
+	sigemptyset(&handler.sa_mask);
+	sigaction(SIGINT, &handler, NULL);
+
 	char input_buffer[COMMAND_LENGTH];
 	char* tokens[NUM_TOKENS];
 	cmd_count = 0;
+
+	//event loop
 	while (true)
 	{
+		// Signal handling
+		/*void (*pfRet)(int);
+		pfRet = signal(SIGINT, custom_handler);
+		assert(pfRet != SIG_ERR);*/
+
 		// Get command
 		// Use write because we need to use read()/write() to work with
 		// signals, and they are incompatible with printf().
@@ -281,7 +306,12 @@ int main(int argc, char* argv[])
 		}
 
 		//execute user commands
-		exec_cmd(tokens, in_background);		
+		exec_cmd(tokens, in_background);
+
+		//flush input_buffer (prevent executing last command upon ctrl+c)
+		input_buffer[0] = '\n';
+		for(int i=1; i<COMMAND_LENGTH; i++)
+			input_buffer[i] = '\0';
 	}
 	return 0;
 }
