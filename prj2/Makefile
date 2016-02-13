@@ -3,7 +3,7 @@
 #  Copyright (c) 2016 Ivan Jonathan Hoo. All rights reserved.
 
 CC = gcc
-CCFLAGS = -g -std=c99 -w
+CCFLAGS = -std=c11 -g -w
 
 SRC = shell.c
 
