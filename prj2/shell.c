@@ -237,8 +237,8 @@ void exec_cmd(char* tokens[], _Bool in_background)
 	else if (pid == 0) {
 		if (execvp(tokens[0], tokens) == -1) {
 			perror(SHELL_ERR);
+			exit(-1);
 		}
-		exit(0);
 	}
 	else if (!in_background) {
 		// Wait for child to finish...
