@@ -47,6 +47,10 @@ int tokenize_command(char* buff, char* tokens[])
 void update_history(char** history, char* buff)
 {
 	int index = cmd_count % HISTORY_DEPTH;
+	if (cmd_count>=10) {
+		free(history[index]);
+		history[index] = NULL;
+	}
 	history[index] = strdup(buff);
 	cmd_count++;
 }
@@ -63,6 +67,8 @@ void print_history()
 			write(STDOUT_FILENO, ". ", strlen(". "));
 			write(STDOUT_FILENO, history[i], strlen(history[i]));
 			write(STDOUT_FILENO, "\n", strlen("\n"));
+			//free memory
+			free(num_str);
 		}
 	}
 	else {
@@ -74,6 +80,8 @@ void print_history()
 			write(STDOUT_FILENO, ". ", strlen(". "));
 			write(STDOUT_FILENO, history[i % HISTORY_DEPTH], strlen(history[i % HISTORY_DEPTH]));
 			write(STDOUT_FILENO, "\n", strlen("\n"));
+			//free memory
+			free(num_str);
 		}
 	}
 }
@@ -103,7 +111,8 @@ void parse_input(char* buff, int length, char* tokens[], _Bool* in_background)
 	// Extract if running in background:
 	if (token_count > 0 && strcmp(tokens[token_count - 1], "&") == 0) {
 		*in_background = true;
-		tokens[token_count - 1] = 0;
+		free(tokens[token_count - 1]);
+		tokens[token_count - 1] = NULL;
 	}
 }
 
@@ -222,6 +231,8 @@ void exec_cmd(char* tokens[], _Bool in_background)
 				parse_input(tmp_cmd_str, strlen(tmp_cmd_str), tokens, &in_background);
 				exec_cmd(tokens, in_background);
 			}
+			//free memory
+			free(num_str);
 		}
 		return;
 	}
@@ -313,5 +324,12 @@ int main(int argc, char* argv[])
 		for(int i=1; i<COMMAND_LENGTH; i++)
 			input_buffer[i] = '\0';
 	}
+
+	//free each element of tokens after program exits
+	for(int i=0; tokens[i]!=NULL && i<NUM_TOKENS; i++) {
+		free(tokens[i]);
+		tokens[i] = NULL;
+	}
+
 	return 0;
 }
