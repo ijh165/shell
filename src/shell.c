@@ -210,7 +210,7 @@ void exec_cmd(char* tokens[], _Bool in_background)
 			char* num_str = malloc(sizeof(char)*(strlen(tokens[0])-1));
 			for(int i=1, j=0; i<strlen(tokens[0]); i++, j++)
 				num_str[j] = tokens[0][i];
-			num_str[strlen(tokens[0])] = "\0";
+			num_str[strlen(tokens[0])] = '\0';
 			int num = atoi(num_str);
 			if (num == 0) {
 				write(STDOUT_FILENO, NOT_INTEGER_ERR, strlen(NOT_INTEGER_ERR));
@@ -273,9 +273,10 @@ void exec_cmd(char* tokens[], _Bool in_background)
 			pid_t wait_pid = waitpid(pid, &stat_val, WUNTRACED);
 		} while (!WIFEXITED(stat_val) && !WIFSIGNALED(stat_val));
 
-		// Cleanup zombie processes
-		while (waitpid(-1, NULL, WNOHANG) > 0);
+
 	}
+	// Cleanup zombie processes
+	while (waitpid(-1, NULL, WNOHANG) > 0);
 }
 
 //handle ctrl+c signal
