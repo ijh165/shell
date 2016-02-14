@@ -2,18 +2,6 @@
 // Created by Ivan Jonathan Hoo and Raymond Chan
 // Copyright (c) 2016 Ivan Jonathan Hoo and Raymond Chan. All rights reserved.
 
-/***
- * A short documentation on how to use valgrind to test the shell for memory leaks...
- * ==================================================================================
- * On terminal:
- * - type make
- * - type "valgrind --leak-check=full --show-leak-kinds=all -v ./shell"
- * - keep typing invalid commands inside the shell and keep checking if valgrind reports error
- * - if you type multiple times already exit the terminal and check again
- * - if valgrind still report no errors then it's safe to assume no memory leak
- * - make sure to type the invalid comamnds >10 times (memory leak most likely caused by history feature)
- **/
-
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
