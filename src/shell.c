@@ -44,23 +44,19 @@
 int cmd_count;
 char* history[HISTORY_DEPTH];
 
-//split the buff into tokens
-int tokenize_command(char* buff, char* tokens[])
+
+
+//free each elements of history[] (prevent memory leak)
+void free_history()
 {
-	int i = 0;
-	char* token = strtok(buff, " \t\r\n\a");
-	while(token != NULL)
-	{
-		tokens[i] = token;
-		i++;
-		token = strtok(NULL, " \t\r\n\a");
+	for(int i=0; i<HISTORY_DEPTH; i++) {
+		free(history[i]);
+		history[i] = NULL;
 	}
-	tokens[i] = NULL;
-	return i;
 }
 
 //update the history str arr
-void update_history(char** history, char* buff)
+void update_history(char* buff)
 {
 	int index = cmd_count % HISTORY_DEPTH;
 	if (cmd_count>=10) {
@@ -85,6 +81,7 @@ void print_history()
 			write(STDOUT_FILENO, "\n", strlen("\n"));
 			//free memory
 			free(num_str);
+			num_str = NULL;
 		}
 	}
 	else {
@@ -98,8 +95,24 @@ void print_history()
 			write(STDOUT_FILENO, "\n", strlen("\n"));
 			//free memory
 			free(num_str);
+			num_str = NULL;
 		}
 	}
+}
+
+//split the buff into tokens
+int tokenize_command(char* buff, char* tokens[])
+{
+	int i = 0;
+	char* token = strtok(buff, " \t\r\n\a");
+	while(token != NULL)
+	{
+		tokens[i] = token;
+		i++;
+		token = strtok(NULL, " \t\r\n\a");
+	}
+	tokens[i] = NULL;
+	return i;
 }
 
 //parse the input command
@@ -115,7 +128,7 @@ void parse_input(char* buff, int length, char* tokens[], _Bool* in_background)
 
 	// Update history only if user enters something
 	if (strlen(buff) != 0) {
-		update_history(history, buff);
+		update_history(buff);
 	}
 
 	// Tokenize (saving original command string)
@@ -127,8 +140,7 @@ void parse_input(char* buff, int length, char* tokens[], _Bool* in_background)
 	// Extract if running in background:
 	if (token_count > 0 && strcmp(tokens[token_count - 1], "&") == 0) {
 		*in_background = true;
-		free(tokens[token_count - 1]);
-		tokens[token_count - 1] = NULL;
+		tokens[token_count - 1] = 0;
 	}
 }
 
@@ -163,6 +175,7 @@ void exec_cmd(char* tokens[], _Bool in_background)
 	// internal commands
 	if (strcmp(tokens[0], "exit") == 0) {
 		write(STDOUT_FILENO, SHELL_EXIT, strlen(SHELL_EXIT));
+		free_history();
 		exit(0);
 	}
 	else if (strcmp(tokens[0], "pwd") == 0) {
@@ -187,23 +200,22 @@ void exec_cmd(char* tokens[], _Bool in_background)
 		return;
 	}
 	else if (strcmp(tokens[0], "!!") == 0) {
-		if(cmd_count == 1) {
-			cmd_count--;
+		cmd_count--;
+		if(cmd_count == 0) {
 			write(STDOUT_FILENO, NO_PREV_CMD_ERR, strlen(NO_PREV_CMD_ERR));
 		}
 		else {
-			char* tmp_cmd_str = history[cmd_count-2];
+			char* tmp_cmd_str = history[(cmd_count-1)%HISTORY_DEPTH];
 			write(STDOUT_FILENO, tmp_cmd_str, strlen(tmp_cmd_str));
 			write(STDOUT_FILENO, "\n", strlen("\n"));
-			cmd_count--;
 			parse_input(tmp_cmd_str, strlen(tmp_cmd_str), tokens, &in_background);
 			exec_cmd(tokens, in_background);
 		}
 		return;
 	}
 	else if (tokens[0][0]== '!') {
-		if(cmd_count == 1) {
-			cmd_count--;
+		cmd_count--;
+		if(cmd_count == 0) {
 			write(STDOUT_FILENO, NO_PREV_CMD_ERR, strlen(NO_PREV_CMD_ERR));
 		}
 		else {
@@ -212,15 +224,10 @@ void exec_cmd(char* tokens[], _Bool in_background)
 				num_str[j] = tokens[0][i];
 			num_str[strlen(tokens[0])] = "\0";
 			int num = atoi(num_str);
-			/*printf("%d\n", num);
-			printf("%d\n", cmd_count);
-			printf("%d\n", (num >= cmd_count+1));*/
 			if (num == 0) {
-				cmd_count--;
 				write(STDOUT_FILENO, NOT_INTEGER_ERR, strlen(NOT_INTEGER_ERR));
 			}
-			else if (num >= cmd_count) {
-				cmd_count--;
+			else if (num > cmd_count) {
 				write(STDOUT_FILENO, SHELL_ERR, strlen(SHELL_ERR));
 				write(STDOUT_FILENO, ": ", strlen(": "));
 				write(STDOUT_FILENO, num_str, strlen(num_str));
@@ -240,15 +247,15 @@ void exec_cmd(char* tokens[], _Bool in_background)
 				write(STDOUT_FILENO, CMD_NOT_EXIST, strlen(CMD_NOT_EXIST));
 			}
 			else {
-				char* tmp_cmd_str = history[num-1];
+				char* tmp_cmd_str = history[(num-1)%HISTORY_DEPTH];
 				write(STDOUT_FILENO, tmp_cmd_str, strlen(tmp_cmd_str));
 				write(STDOUT_FILENO, "\n", strlen("\n"));
-				cmd_count--;
 				parse_input(tmp_cmd_str, strlen(tmp_cmd_str), tokens, &in_background);
 				exec_cmd(tokens, in_background);
 			}
 			//free memory
 			free(num_str);
+			num_str = NULL;
 		}
 		return;
 	}
@@ -278,11 +285,12 @@ void exec_cmd(char* tokens[], _Bool in_background)
 			pid_t wait_pid = waitpid(pid, &stat_val, WUNTRACED);
 		} while (!WIFEXITED(stat_val) && !WIFSIGNALED(stat_val));
 
-		// Cleanup zombies processes
+		// Cleanup zombie processes
 		while (waitpid(-1, NULL, WNOHANG) > 0);
 	}
 }
 
+//handle ctrl+c signal
 void handle_SIGINT()
 {
 	write(STDOUT_FILENO, "\n", strlen("\n"));
@@ -308,11 +316,6 @@ int main(int argc, char* argv[])
 	//event loop
 	while (true)
 	{
-		// Signal handling
-		/*void (*pfRet)(int);
-		pfRet = signal(SIGINT, custom_handler);
-		assert(pfRet != SIG_ERR);*/
-
 		// Get command
 		// Use write because we need to use read()/write() to work with
 		// signals, and they are incompatible with printf().
@@ -341,11 +344,7 @@ int main(int argc, char* argv[])
 			input_buffer[i] = '\0';
 	}
 
-	//free each element of tokens after program exits
-	for(int i=0; tokens[i]!=NULL && i<NUM_TOKENS; i++) {
-		free(tokens[i]);
-		tokens[i] = NULL;
-	}
+	
 
 	return 0;
 }
