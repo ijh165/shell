@@ -26,13 +26,11 @@
 #define GET_CWD_ERR "getcwd() error\n"
 #define NO_PREV_CMD_ERR "SHELL ERROR: No previous command\n"
 #define NOT_INTEGER_ERR "SHELL ERROR: Please input an integer after !\n"
-#define CMD_NOT_EXIST "command doesn't exist\n"
+#define CMD_NOT_FOUND "command not found\n"
 
 //global variables
 int cmd_count;
 char* history[HISTORY_DEPTH];
-
-
 
 //free each elements of history[] (prevent memory leak)
 void free_history()
@@ -47,7 +45,7 @@ void free_history()
 void update_history(char* buff)
 {
 	int index = cmd_count % HISTORY_DEPTH;
-	if (cmd_count>=10) {
+	if (cmd_count >= HISTORY_DEPTH) {
 		free(history[index]);
 		history[index] = NULL;
 	}
@@ -58,7 +56,7 @@ void update_history(char* buff)
 //prints the history
 void print_history()
 {
-	if(cmd_count<=10) {
+	if (cmd_count <= HISTORY_DEPTH) {
 		for(int i = 0; i<cmd_count; i++)
 		{
 			char* num_str = malloc(16);
@@ -73,7 +71,7 @@ void print_history()
 		}
 	}
 	else {
-		for(int i = cmd_count-10; i<cmd_count; i++)
+		for(int i=cmd_count-HISTORY_DEPTH; i<cmd_count; i++)
 		{
 			char* num_str = malloc(16);
 			snprintf(num_str, 16, "%d", i+1);
@@ -115,7 +113,7 @@ void parse_input(char* buff, int length, char* tokens[], _Bool* in_background)
 	}
 
 	// Update history only if user enters something
-	if (strlen(buff) != 0) {
+	if (strlen(buff) != 0 && buff[0]!='!') {
 		update_history(buff);
 	}
 
@@ -188,12 +186,12 @@ void exec_cmd(char* tokens[], _Bool in_background)
 		return;
 	}
 	else if (strcmp(tokens[0], "!!") == 0) {
-		cmd_count--;
+		//cmd_count--;
 		if(cmd_count == 0) {
 			write(STDOUT_FILENO, NO_PREV_CMD_ERR, strlen(NO_PREV_CMD_ERR));
 		}
 		else {
-			char* tmp_cmd_str = history[(cmd_count-1)%HISTORY_DEPTH];
+			char* tmp_cmd_str = strdup(history[(cmd_count-1)%HISTORY_DEPTH]);
 			write(STDOUT_FILENO, tmp_cmd_str, strlen(tmp_cmd_str));
 			write(STDOUT_FILENO, "\n", strlen("\n"));
 			parse_input(tmp_cmd_str, strlen(tmp_cmd_str), tokens, &in_background);
@@ -202,12 +200,13 @@ void exec_cmd(char* tokens[], _Bool in_background)
 		return;
 	}
 	else if (tokens[0][0]== '!') {
-		cmd_count--;
+		//printf("cmd_count: %d\n", cmd_count);
+		//cmd_count--;
 		if(cmd_count == 0) {
 			write(STDOUT_FILENO, NO_PREV_CMD_ERR, strlen(NO_PREV_CMD_ERR));
 		}
 		else {
-			char* num_str = malloc(sizeof(char)*(strlen(tokens[0])-1));
+			char* num_str = malloc(sizeof(char)*(strlen(tokens[0])));
 			for(int i=1, j=0; i<strlen(tokens[0]); i++, j++)
 				num_str[j] = tokens[0][i];
 			num_str[strlen(tokens[0])] = '\0';
@@ -215,7 +214,7 @@ void exec_cmd(char* tokens[], _Bool in_background)
 			if (num == 0) {
 				write(STDOUT_FILENO, NOT_INTEGER_ERR, strlen(NOT_INTEGER_ERR));
 			}
-			else if (num > cmd_count) {
+			else if (num>cmd_count || num<cmd_count-HISTORY_DEPTH+1) {
 				write(STDOUT_FILENO, SHELL_ERR, strlen(SHELL_ERR));
 				write(STDOUT_FILENO, ": ", strlen(": "));
 				write(STDOUT_FILENO, num_str, strlen(num_str));
@@ -232,7 +231,7 @@ void exec_cmd(char* tokens[], _Bool in_background)
 					default:
 						write(STDOUT_FILENO, "th ", strlen("th "));
 				}
-				write(STDOUT_FILENO, CMD_NOT_EXIST, strlen(CMD_NOT_EXIST));
+				write(STDOUT_FILENO, CMD_NOT_FOUND, strlen(CMD_NOT_FOUND));
 			}
 			else {
 				char* tmp_cmd_str = history[(num-1)%HISTORY_DEPTH];
@@ -305,6 +304,9 @@ int main(int argc, char* argv[])
 	//event loop
 	while (true)
 	{
+		//debug stuffz
+		//printf("cmd_count: %d\n", cmd_count);
+
 		// Get command
 		// Use write because we need to use read()/write() to work with
 		// signals, and they are incompatible with printf().
@@ -332,8 +334,6 @@ int main(int argc, char* argv[])
 		for(int i=1; i<COMMAND_LENGTH; i++)
 			input_buffer[i] = '\0';
 	}
-
-	
 
 	return 0;
 }
