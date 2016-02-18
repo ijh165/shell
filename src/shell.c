@@ -159,6 +159,16 @@ void read_command(char* buff, char* tokens[], _Bool* in_background)
 	parse_input(buff, length, tokens, in_background);
 }
 
+//check if string is num_str is float instead of integer
+_Bool isFloat(const char* num_str) {
+	float tmpFloat = atof(num_str);
+	int tmpInt = tmpFloat;
+	if (tmpFloat == tmpInt) {
+		return false;
+	}
+	return true;
+}
+
 //function to execute user commands
 void exec_cmd(char* tokens[], _Bool in_background)
 {
@@ -211,11 +221,12 @@ void exec_cmd(char* tokens[], _Bool in_background)
 		}
 		else {
 			char* num_str = malloc(sizeof(char)*(strlen(tokens[0])));
-			for(int i=1, j=0; i<strlen(tokens[0]); i++, j++)
+			for(int i=1, j=0; i<strlen(tokens[0]); i++, j++) {
 				num_str[j] = tokens[0][i];
+			}
 			num_str[strlen(tokens[0])] = '\0';
 			int num = atoi(num_str);
-			if (num == 0) {
+			if (num<1 || isFloat(num_str)) {
 				write(STDOUT_FILENO, NOT_INTEGER_ERR, strlen(NOT_INTEGER_ERR));
 			}
 			else if (num>cmd_count || num<cmd_count-HISTORY_DEPTH+1) {
@@ -275,8 +286,6 @@ void exec_cmd(char* tokens[], _Bool in_background)
 		do {
 			pid_t wait_pid = waitpid(pid, &stat_val, WUNTRACED);
 		} while (!WIFEXITED(stat_val) && !WIFSIGNALED(stat_val));
-
-
 	}
 	// Cleanup zombie processes
 	while (waitpid(-1, NULL, WNOHANG) > 0);
@@ -335,8 +344,9 @@ int main(int argc, char* argv[])
 
 		//flush input_buffer (prevent executing last command upon ctrl+c)
 		input_buffer[0] = '\n';
-		for(int i=1; i<COMMAND_LENGTH; i++)
+		for(int i=1; i<COMMAND_LENGTH; i++) {
 			input_buffer[i] = '\0';
+		}
 	}
 
 	return 0;
