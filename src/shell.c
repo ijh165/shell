@@ -25,8 +25,9 @@
 #define CANNOT_READ_CMD_ERR "Unable to read command. Terminating.\n"
 #define GET_CWD_ERR "getcwd() error\n"
 #define NO_PREV_CMD_ERR "SHELL ERROR: No previous command\n"
-#define NOT_INTEGER_ERR "SHELL ERROR: Please input an integer after !\n"
-#define CMD_NOT_FOUND "command not found\n"
+#define INVALID_INTEGER_ERR "SHELL ERROR: Please input a valid integer after !\n"
+#define CMD_NOT_FOUND_ERR "command not found\n"
+#define DELIMITERS " \t\r\n\a"
 
 //global variables
 int cmd_count;
@@ -94,12 +95,12 @@ void print_history()
 int tokenize_command(char* buff, char* tokens[])
 {
 	int i = 0;
-	char* token = strtok(buff, " \t\r\n\a");
+	char* token = strtok(buff, DELIMITERS);
 	while(token != NULL)
 	{
 		tokens[i] = token;
 		i++;
-		token = strtok(NULL, " \t\r\n\a");
+		token = strtok(NULL, DELIMITERS);
 	}
 	tokens[i] = NULL;
 	return i;
@@ -227,7 +228,7 @@ void exec_cmd(char* tokens[], _Bool in_background)
 			num_str[strlen(tokens[0])] = '\0';
 			int num = atoi(num_str);
 			if (num<1 || isFloat(num_str)) {
-				write(STDOUT_FILENO, NOT_INTEGER_ERR, strlen(NOT_INTEGER_ERR));
+				write(STDOUT_FILENO, INVALID_INTEGER_ERR, strlen(INVALID_INTEGER_ERR));
 			}
 			else if (num>cmd_count || num<cmd_count-HISTORY_DEPTH+1) {
 				write(STDOUT_FILENO, SHELL_ERR, strlen(SHELL_ERR));
@@ -246,7 +247,7 @@ void exec_cmd(char* tokens[], _Bool in_background)
 					default:
 						write(STDOUT_FILENO, "th ", strlen("th "));
 				}
-				write(STDOUT_FILENO, CMD_NOT_FOUND, strlen(CMD_NOT_FOUND));
+				write(STDOUT_FILENO, CMD_NOT_FOUND_ERR, strlen(CMD_NOT_FOUND_ERR));
 			}
 			else {
 				char* tmp_cmd_str = history[(num-1)%HISTORY_DEPTH];
@@ -284,7 +285,7 @@ void exec_cmd(char* tokens[], _Bool in_background)
 	else if (!in_background) {
 		// Wait for child to finish...
 		do {
-			pid_t wait_pid = waitpid(pid, &stat_val, WUNTRACED);
+			waitpid(pid, &stat_val, WUNTRACED);
 		} while (!WIFEXITED(stat_val) && !WIFSIGNALED(stat_val));
 	}
 	// Cleanup zombie processes

@@ -3,7 +3,7 @@
 #  Copyright (c) 2016 Ivan Jonathan Hoo. All rights reserved.
 
 CC = gcc
-CCFLAGS = -std=c11 -g -w -D_POSIX_C_SOURCE
+CCFLAGS = -std=gnu99 -g -Wall -Werror
 
 SRC = shell.c
 
