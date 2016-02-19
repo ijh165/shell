@@ -227,6 +227,9 @@ void exec_cmd(char* tokens[], _Bool in_background)
 			write(STDOUT_FILENO, "\n", strlen("\n"));
 			parse_input(tmp_cmd_str, strlen(tmp_cmd_str), tokens, &in_background);
 			exec_cmd(tokens, in_background);
+			//free memory
+			free(tmp_cmd_str);
+			tmp_cmd_str = NULL;
 		}
 		return;
 	}
@@ -254,6 +257,9 @@ void exec_cmd(char* tokens[], _Bool in_background)
 				write(STDOUT_FILENO, "\n", strlen("\n"));
 				parse_input(tmp_cmd_str, strlen(tmp_cmd_str), tokens, &in_background);
 				exec_cmd(tokens, in_background);
+				//free memory
+				free(tmp_cmd_str);
+				tmp_cmd_str = NULL;
 			}
 			//free memory
 			free(num_str);
