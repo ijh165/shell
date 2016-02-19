@@ -246,7 +246,7 @@ void exec_cmd(char* tokens[], _Bool in_background)
 			for(int i=1, j=0; i<strlen(tokens[0]); i++, j++) {
 				num_str[j] = tokens[0][i];
 			}
-			num_str[strlen(tokens[0])] = '\0';
+			num_str[strlen(tokens[0])-1] = '\0';
 			int num = atoi(num_str);
 			if(isFloat(num_str) || num<1 || num<cmd_count-HISTORY_DEPTH+1 || num>cmd_count) {
 				write(STDOUT_FILENO, UNKNOWN_HIST_CMD_ERR, strlen(UNKNOWN_HIST_CMD_ERR));
