@@ -30,6 +30,7 @@
 /*#define NO_PREV_CMD_ERR "SHELL: No previous command\n"
 #define INVALID_INTEGER_ERR "SHELL: Please input a valid integer after !\n"
 #define CMD_NOT_FOUND_ERR "command not found\n"*/
+#define MALLOC_FAIL_ERR "SHELL: malloc() failed! exiting...\n"
 
 //global variables
 int cmd_count;
@@ -45,9 +46,13 @@ void free_history()
 }
 
 //update the history str arr
-void update_history(char* buff)
+void update_history(const char* buff)
 {
 	char* tmp = malloc(sizeof(char) * strlen(buff));
+	if(tmp == NULL) {
+		write(STDOUT_FILENO, MALLOC_FAIL_ERR, strlen(MALLOC_FAIL_ERR));
+		exit(-1);
+	}
 	strcpy(tmp, buff);
 	int index = cmd_count % HISTORY_DEPTH;
 	if(cmd_count >= HISTORY_DEPTH) {
@@ -65,6 +70,10 @@ void print_history()
 		for(int i = 0; i<cmd_count; i++)
 		{
 			char* num_str = malloc(16);
+			if(num_str == NULL) {
+				write(STDOUT_FILENO, MALLOC_FAIL_ERR, strlen(MALLOC_FAIL_ERR));
+				exit(-1);
+			}
 			snprintf(num_str, 16, "%d", i+1);
 			write(STDOUT_FILENO, num_str, strlen(num_str));
 			write(STDOUT_FILENO, "\t", strlen("\t"));
@@ -79,6 +88,10 @@ void print_history()
 		for(int i=cmd_count-HISTORY_DEPTH; i<cmd_count; i++)
 		{
 			char* num_str = malloc(16);
+			if(num_str == NULL) {
+				write(STDOUT_FILENO, MALLOC_FAIL_ERR, strlen(MALLOC_FAIL_ERR));
+				exit(-1);
+			}
 			snprintf(num_str, 16, "%d", i+1);
 			write(STDOUT_FILENO, num_str, strlen(num_str));
 			write(STDOUT_FILENO, "\t", strlen("\t"));
@@ -219,6 +232,10 @@ void exec_cmd(char* tokens[], _Bool in_background)
 		}
 		else {
 			char* num_str = malloc(sizeof(char)*(strlen(tokens[0])));
+			if(num_str == NULL) {
+				write(STDOUT_FILENO, MALLOC_FAIL_ERR, strlen(MALLOC_FAIL_ERR));
+				exit(-1);
+			}
 			for(int i=1, j=0; i<strlen(tokens[0]); i++, j++) {
 				num_str[j] = tokens[0][i];
 			}
