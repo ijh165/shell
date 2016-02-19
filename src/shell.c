@@ -60,6 +60,10 @@ void update_history(const char* buff)
 		history[index] = NULL;
 	}
 	history[index] = strdup(tmp);
+	//free memory
+	free(tmp);
+	tmp = NULL;
+	//increase command counter
 	cmd_count++;
 }
 
