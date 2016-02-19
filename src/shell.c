@@ -222,7 +222,7 @@ void exec_cmd(char* tokens[], _Bool in_background)
 			write(STDOUT_FILENO, UNKNOWN_HIST_CMD_ERR, strlen(UNKNOWN_HIST_CMD_ERR));
 		}
 		else {
-			char* tmp_cmd_str = strdup(history[(cmd_count-1)%HISTORY_DEPTH]);
+			char* tmp_cmd_str = history[(cmd_count-1)%HISTORY_DEPTH];
 			write(STDOUT_FILENO, tmp_cmd_str, strlen(tmp_cmd_str));
 			write(STDOUT_FILENO, "\n", strlen("\n"));
 			parse_input(tmp_cmd_str, strlen(tmp_cmd_str), tokens, &in_background);
