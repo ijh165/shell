@@ -19,15 +19,17 @@
 #define HISTORY_DEPTH 10
 
 //string defns
-#define SHELL_EXIT "Exiting shell\n"
-#define SHELL_ERR "SHELL ERROR"
-#define FORK_FAIL_ERR "SHELL ERROR (FORKING FAIL)"
+#define DELIMITERS " \t\r\n\a"
+#define SHELL "SHELL"
+/*#define SHELL_EXIT "Exiting shell\n"*/
 #define CANNOT_READ_CMD_ERR "Unable to read command. Terminating.\n"
 #define GET_CWD_ERR "getcwd() error\n"
-#define NO_PREV_CMD_ERR "SHELL ERROR: No previous command\n"
-#define INVALID_INTEGER_ERR "SHELL ERROR: Please input a valid integer after !\n"
-#define CMD_NOT_FOUND_ERR "command not found\n"
-#define DELIMITERS " \t\r\n\a"
+#define INVALID_DIR_ERR "SHELL: Invalid directory.\n"
+#define UNKNOWN_CMD_ERR ": Unknown command.\n"
+#define UNKNOWN_HIST_CMD_ERR "SHELL: Unknown history command.\n"
+/*#define NO_PREV_CMD_ERR "SHELL: No previous command\n"
+#define INVALID_INTEGER_ERR "SHELL: Please input a valid integer after !\n"
+#define CMD_NOT_FOUND_ERR "command not found\n"*/
 
 //global variables
 int cmd_count;
@@ -45,11 +47,10 @@ void free_history()
 //update the history str arr
 void update_history(char* buff)
 {
-	char* tmp;
-	tmp = malloc(sizeof(char) * strlen(buff));
+	char* tmp = malloc(sizeof(char) * strlen(buff));
 	strcpy(tmp, buff);
 	int index = cmd_count % HISTORY_DEPTH;
-	if (cmd_count >= HISTORY_DEPTH) {
+	if(cmd_count >= HISTORY_DEPTH) {
 		free(history[index]);
 		history[index] = NULL;
 	}
@@ -57,17 +58,16 @@ void update_history(char* buff)
 	cmd_count++;
 }
 
-
 //prints the history
 void print_history()
 {
-	if (cmd_count <= HISTORY_DEPTH) {
+	if(cmd_count <= HISTORY_DEPTH) {
 		for(int i = 0; i<cmd_count; i++)
 		{
 			char* num_str = malloc(16);
 			snprintf(num_str, 16, "%d", i+1);
 			write(STDOUT_FILENO, num_str, strlen(num_str));
-			write(STDOUT_FILENO, ". ", strlen(". "));
+			write(STDOUT_FILENO, "\t", strlen("\t"));
 			write(STDOUT_FILENO, history[i], strlen(history[i]));
 			write(STDOUT_FILENO, "\n", strlen("\n"));
 			//free memory
@@ -81,7 +81,7 @@ void print_history()
 			char* num_str = malloc(16);
 			snprintf(num_str, 16, "%d", i+1);
 			write(STDOUT_FILENO, num_str, strlen(num_str));
-			write(STDOUT_FILENO, ". ", strlen(". "));
+			write(STDOUT_FILENO, "\t", strlen("\t"));
 			write(STDOUT_FILENO, history[i % HISTORY_DEPTH], strlen(history[i % HISTORY_DEPTH]));
 			write(STDOUT_FILENO, "\n", strlen("\n"));
 			//free memory
@@ -113,44 +113,44 @@ void parse_input(char* buff, int length, char* tokens[], _Bool* in_background)
 
 	// Null terminate and strip \n.
 	buff[length] = '\0';
-	if (buff[strlen(buff) - 1] == '\n') {
+	if(buff[strlen(buff) - 1] == '\n') {
 		buff[strlen(buff) - 1] = '\0';
 	}
 
 	// Update history only if user enters something
-	if (strlen(buff) != 0 && buff[0]!='!') {
+	if(strlen(buff) != 0 && buff[0]!='!') {
 		update_history(buff);
 	}
 
 	// Tokenize (saving original command string)
 	int token_count = tokenize_command(buff, tokens);
-	if (token_count == 0) {
+	if(token_count == 0) {
 		return;
 	}
 
 	// Extract if running in background:
-	if (token_count > 0 && strcmp(tokens[token_count - 1], "&") == 0) {
+	if(token_count > 0 && strcmp(tokens[token_count - 1], "&") == 0) {
 		*in_background = true;
 		tokens[token_count - 1] = 0;
 	}
 }
 
 /**
-* Read a command from the keyboard into the buffer 'buff' and tokenize it
-* such that 'tokens[i]' points into 'buff' to the i'th token in the command.
-* buff: Buffer allocated by the calling code. Must be at least
-* COMMAND_LENGTH bytes long.
-* tokens[]: Array of character pointers which point into 'buff'. Must be at
-* least NUM_TOKENS long. Will strip out up to one final '&' token.
-* 'tokens' will be NULL terminated.
-* in_background: pointer to a boolean variable. Set to true if user entered
-* an & as their last token; otherwise set to false.
-*/
+ * Read a command from the keyboard into the buffer 'buff' and tokenize it
+ * such that 'tokens[i]' points into 'buff' to the i'th token in the command.
+ * buff: Buffer allocated by the calling code. Must be at least
+ * COMMAND_LENGTH bytes long.
+ * tokens[]: Array of character pointers which point into 'buff'. Must be at
+ * least NUM_TOKENS long. Will strip out up to one final '&' token.
+ * 'tokens' will be NULL terminated.
+ * in_background: pointer to a boolean variable. Set to true if user entered
+ * an & as their last token; otherwise set to false.
+ */
 void read_command(char* buff, char* tokens[], _Bool* in_background)
 {
 	// Read input
 	int length = read(STDIN_FILENO, buff, COMMAND_LENGTH-1);
-	if ( (length < 0) && (errno !=EINTR) )
+	if( (length < 0) && (errno !=EINTR) )
 	{
 		perror(CANNOT_READ_CMD_ERR);
 		exit(-1); /* terminate with error */
@@ -164,7 +164,7 @@ void read_command(char* buff, char* tokens[], _Bool* in_background)
 _Bool isFloat(const char* num_str) {
 	float tmpFloat = atof(num_str);
 	int tmpInt = tmpFloat;
-	if (tmpFloat == tmpInt) {
+	if(tmpFloat == tmpInt) {
 		return false;
 	}
 	return true;
@@ -174,14 +174,14 @@ _Bool isFloat(const char* num_str) {
 void exec_cmd(char* tokens[], _Bool in_background)
 {
 	// internal commands
-	if (strcmp(tokens[0], "exit") == 0) {
-		write(STDOUT_FILENO, SHELL_EXIT, strlen(SHELL_EXIT));
+	if(strcmp(tokens[0], "exit") == 0) {
+		/*write(STDOUT_FILENO, SHELL_EXIT, strlen(SHELL_EXIT));*/
 		free_history();
 		exit(0);
 	}
-	else if (strcmp(tokens[0], "pwd") == 0) {
+	else if(strcmp(tokens[0], "pwd") == 0) {
 		char cwd[COMMAND_LENGTH];
-		if (getcwd(cwd, sizeof(cwd)) != NULL) {
+		if(getcwd(cwd, sizeof(cwd)) != NULL) {
 			write(STDOUT_FILENO, cwd, strlen(cwd));
 			write(STDOUT_FILENO, "\n", strlen("\n"));
 		}
@@ -190,20 +190,19 @@ void exec_cmd(char* tokens[], _Bool in_background)
 		}
 		return;
 	}
-	else if (strcmp(tokens[0], "cd") == 0) {
-		if (chdir(tokens[1]) != 0) {
-			perror(SHELL_ERR);
+	else if(strcmp(tokens[0], "cd") == 0) {
+		if(chdir(tokens[1]) != 0) {
+			write(STDOUT_FILENO, INVALID_DIR_ERR, strlen(INVALID_DIR_ERR));
 		}
 		return;
 	}
-	else if (strcmp(tokens[0], "history") == 0) {
+	else if(strcmp(tokens[0], "history") == 0) {
 		print_history();
 		return;
 	}
-	else if (strcmp(tokens[0], "!!") == 0) {
-		//cmd_count--;
+	else if(strcmp(tokens[0], "!!") == 0) {
 		if(cmd_count == 0) {
-			write(STDOUT_FILENO, NO_PREV_CMD_ERR, strlen(NO_PREV_CMD_ERR));
+			write(STDOUT_FILENO, UNKNOWN_HIST_CMD_ERR, strlen(UNKNOWN_HIST_CMD_ERR));
 		}
 		else {
 			char* tmp_cmd_str = strdup(history[(cmd_count-1)%HISTORY_DEPTH]);
@@ -214,11 +213,9 @@ void exec_cmd(char* tokens[], _Bool in_background)
 		}
 		return;
 	}
-	else if (tokens[0][0]== '!') {
-		//printf("cmd_count: %d\n", cmd_count);
-		//cmd_count--;
+	else if(tokens[0][0] == '!') {
 		if(cmd_count == 0) {
-			write(STDOUT_FILENO, NO_PREV_CMD_ERR, strlen(NO_PREV_CMD_ERR));
+			write(STDOUT_FILENO, UNKNOWN_HIST_CMD_ERR, strlen(UNKNOWN_HIST_CMD_ERR));
 		}
 		else {
 			char* num_str = malloc(sizeof(char)*(strlen(tokens[0])));
@@ -227,27 +224,8 @@ void exec_cmd(char* tokens[], _Bool in_background)
 			}
 			num_str[strlen(tokens[0])] = '\0';
 			int num = atoi(num_str);
-			if (num<1 || isFloat(num_str)) {
-				write(STDOUT_FILENO, INVALID_INTEGER_ERR, strlen(INVALID_INTEGER_ERR));
-			}
-			else if (num>cmd_count || num<cmd_count-HISTORY_DEPTH+1) {
-				write(STDOUT_FILENO, SHELL_ERR, strlen(SHELL_ERR));
-				write(STDOUT_FILENO, ": ", strlen(": "));
-				write(STDOUT_FILENO, num_str, strlen(num_str));
-				switch (num) {
-					case 1:
-						write(STDOUT_FILENO, "st ", strlen("st "));
-						break;
-					case 2:
-						write(STDOUT_FILENO, "nd ", strlen("nd "));
-						break;
-					case 3:
-						write(STDOUT_FILENO, "rd ", strlen("rd "));
-						break;
-					default:
-						write(STDOUT_FILENO, "th ", strlen("th "));
-				}
-				write(STDOUT_FILENO, CMD_NOT_FOUND_ERR, strlen(CMD_NOT_FOUND_ERR));
+			if(isFloat(num_str) || num<1 || num<cmd_count-HISTORY_DEPTH+1 || num>cmd_count) {
+				write(STDOUT_FILENO, UNKNOWN_HIST_CMD_ERR, strlen(UNKNOWN_HIST_CMD_ERR));
 			}
 			else {
 				char* tmp_cmd_str = history[(num-1)%HISTORY_DEPTH];
@@ -273,23 +251,25 @@ void exec_cmd(char* tokens[], _Bool in_background)
 	 */
 	int stat_val;
 	pid_t pid = fork();
-	if (pid < 0) {
-		perror(FORK_FAIL_ERR);
+	if(pid < 0) {
+		perror(SHELL);
 	}
-	else if (pid == 0) {
-		if (execvp(tokens[0], tokens) == -1) {
-			perror(SHELL_ERR);
+	else if(pid == 0) {
+		if(execvp(tokens[0], tokens) == -1) {
+			/*perror(SHELL);*/
+			write(STDOUT_FILENO, tokens[0], strlen(tokens[0]));
+			write(STDOUT_FILENO, UNKNOWN_CMD_ERR, strlen(UNKNOWN_CMD_ERR));
 			exit(-1);
 		}
 	}
-	else if (!in_background) {
+	else if(!in_background) {
 		// Wait for child to finish...
 		do {
 			waitpid(pid, &stat_val, WUNTRACED);
-		} while (!WIFEXITED(stat_val) && !WIFSIGNALED(stat_val));
+		} while(!WIFEXITED(stat_val) && !WIFSIGNALED(stat_val));
 	}
 	// Cleanup zombie processes
-	while (waitpid(-1, NULL, WNOHANG) > 0);
+	while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
 //handle ctrl+c signal
@@ -300,8 +280,8 @@ void handle_SIGINT()
 }
 
 /**
-* Main and Execute Commands
-*/
+ * Main and Execute Commands
+ */
 int main(int argc, char* argv[])
 {
 	/* set up the signal handler */
@@ -316,16 +296,13 @@ int main(int argc, char* argv[])
 	cmd_count = 0;
 
 	//event loop
-	while (true)
+	while(true)
 	{
-		//debug stuffz
-		//printf("cmd_count: %d\n", cmd_count);
-
 		// Get command
 		// Use write because we need to use read()/write() to work with
 		// signals, and they are incompatible with printf().
 		char cwd[COMMAND_LENGTH];
-		if (getcwd(cwd, sizeof(cwd)) != NULL) {
+		if(getcwd(cwd, sizeof(cwd)) != NULL) {
 			write(STDOUT_FILENO, cwd, strlen(cwd));
 		}
 		else {
@@ -336,7 +313,7 @@ int main(int argc, char* argv[])
 		read_command(input_buffer, tokens, &in_background);
 
 		//do nothing if user enter nothing
-		if (strlen(input_buffer) == 0) {
+		if(strlen(input_buffer) == 0) {
 			continue;
 		}
 
